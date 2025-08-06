@@ -10,13 +10,17 @@
     "test": "jest"
   },
   "dependencies": {
+    "nativewind": "^4.1.23",
     "react": "18.3.1",
-    "react-native": "0.75.5"
+    "react-native": "0.75.5",
+    "react-native-svg": "^15.12.1",
+    "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@babel/preset-env": "^7.20.0",
     "@babel/runtime": "^7.20.0",
+    "@react-native-community/cli": "^19.1.1",
     "@react-native/babel-preset": "0.75.5",
     "@react-native/eslint-config": "0.75.5",
     "@react-native/metro-config": "0.75.5",
