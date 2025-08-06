@@ -1,28 +1,27 @@
-const bycrypt = require("bycrypt");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const User = require("../models/userModel");
 const db = require("../config/db");
 const createError = require("http-errors");
 const cookieParser = require("cookie-parser");
 
-exports.login = (req, res) => {
+exports.login = (req, res, next) => {
     try{
         const {emailId, password} = req.body;
         if(!emailId.trim() || !password.trim()) {
          return createError(BadRequest, "EmailId or Password is missing!");
         }
         const sql = `select * from (
-         select * from students where emailId = ? and password = ?
+         select id,name,email_id from students where email_id = ? and password = ?
          union
-         select * from faculties where emailId = ? and password = ?
+         select id,name,email_id from faculties where email_id = ? and password = ?
          union 
-         select * from admins where emaildId = ? and password = ?
+         select id,name,email_id from admins where email_id = ? and password = ?
         ) as all_matches limit 1`;
          
         const values = [emailId, password, emailId, password, emailId, password];
         db.query(sql,values,(error,result) => {
             if(error) {
-                return createError(BadRequest,"An error occured",error);
+                return next(error)
             }
             if(result.length === 0){
                 return createError(Unauthorized, "Invalid emailId or password");

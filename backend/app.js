@@ -4,6 +4,10 @@ const cors = require("cors");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const createError = require("http-errors");
+const authRoute = require("./routes/authRoutes");
+const studentRoute = require("./routes/studentRoutes");
+const facultyRoute = require("./routes/facultyRoute");
+const adminRoute = require("./routes/adminRoute")
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -16,6 +20,10 @@ app.use(cors({
 ));
 app.use(morgan('dev'));
 app.use(bodyParser.json());
+app.use('/',authRoute);
+app.use('/',studentRoute);
+app.use('/',facultyRoute);
+app.use('/',adminRoute);
 
 app.use((req,res,next) => {
     next(createError.NotFound("api do not found"));

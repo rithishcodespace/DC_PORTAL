@@ -7,7 +7,6 @@ CREATE TABLE faculty_logger (
     faculty_id VARCHAR(200),
     status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
     photo_url VARCHAR(255),
-    sent_to_admin boolean default false,
     FOREIGN KEY (student_id) REFERENCES students(id)
      on delete cascade
      on update cascade
@@ -40,17 +39,14 @@ create table faculty_to_admin_issues (
 );
 
 create table meetings (
-    meeting_id varchar(20) primary key,
+    meeting_id varchar(25) primary key,
     complaint_id varchar(20) not null,
-    student_id bigint not null,
+    admin_id bigint not null,
     venue varchar(200) not null,
     date_time datetime not null,
     info text not null,
     attendence enum ('pending','present','absent'),
-    foreign key (complaint_id) references faculty_to_admin_issues(complaint_id)
-    on delete cascade
-    on update cascade,
-    foreign key (student_id) references students(id)
+    foreign key (admin_id) references admins(id)
     on delete cascade
     on update cascade
 );
