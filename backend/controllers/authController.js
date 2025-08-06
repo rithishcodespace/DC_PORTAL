@@ -11,8 +11,15 @@ exports.login = (req, res) => {
         if(!emailId.trim() || !password.trim()) {
          return createError(BadRequest, "EmailId or Password is missing!");
         }
-        const sql = "select * from users where emailId = ? and password = ?";
-        const values = [emailId, password];
+        const sql = `select * from (
+         select * from students where emailId = ? and password = ?
+         union
+         select * from faculties where emailId = ? and password = ?
+         union 
+         select * from admins where emaildId = ? and password = ?
+        ) as all_matches limit 1`;
+         
+        const values = [emailId, password, emailId, password, emailId, password];
         db.query(sql,values,(error,result) => {
             if(error) {
                 return createError(BadRequest,"An error occured",error);
