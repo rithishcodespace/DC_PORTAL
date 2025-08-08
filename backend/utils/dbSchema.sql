@@ -6,22 +6,8 @@ CREATE TABLE faculty_logger (
     venue VARCHAR(200) NOT NULL,
     faculty_id VARCHAR(200),
     status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
-    photo_url VARCHAR(255),
-    FOREIGN KEY (student_id) REFERENCES students(id)
-     on delete cascade
-     on update cascade
-);
-
-create table complaint_responses (
-    response_id varchar(20) primary key,
-    complaint_id varchar(20) not null,
-    student_id bigint not null,
-    response text not null,
-    status enum('pending','accepted','rejected') default 'pending',
-    foreign key (complaint_id) references faculty_logger (complaint_id)
-     on delete cascade
-     on update cascade,
-    foreign key (student_id) references students(id)
+    revoke_message text,
+    FOREIGN KEY (student_id) REFERENCES users(user_id)
      on delete cascade
      on update cascade
 );
@@ -33,7 +19,7 @@ create table faculty_to_admin_issues (
     foreign key (complaint_id) references faculty_logger(complaint_id)
     on delete cascade
     on update cascade,
-    foreign key (student_id) references students(id)
+    foreign key (student_id) references users(user_id)
     on delete cascade
     on update cascade
 );
@@ -46,39 +32,26 @@ create table meetings (
     date_time datetime not null,
     info text not null,
     attendence enum ('pending','present','absent'),
-    foreign key (admin_id) references admins(id)
+    foreign key (admin_id) references users(user_id)
     on delete cascade
     on update cascade
 );
 
-create table students(
-    id bigint auto_increment primary key,
-    name varchar(200) not null,
-    reg_num varchar(200) not null,
-    email_id varchar(200) not null,
-    password varchar(200) not null,
-    dept varchar(100) not null,
-
-    UNIQUE INDEX reg_num_idx (reg_num),      
-    UNIQUE INDEX email_id_idx (email_id)
+create table roles(
+    role_id int primary key,
+    role varchar(200) not null unique
 );
 
-create table admins(
-    id bigint auto_increment primary key,
-    name varchar(200) not null,
-    email_id varchar(200) not null,
-    password varchar(200) not null,
-    dept varchar(100) not null,
-    
-    UNIQUE INDEX email_id_idx (email_id)
-);
-
-create table faculties(
-    id bigint auto_increment primary key,
-    name varchar(200) not null,
-    email_id varchar(200) not null,
-    password varchar(200) not null,
-    dept varchar(100) not null,
-        
-    UNIQUE INDEX email_id_idx (email_id)
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    role_id INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    emailId VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    register_number VARCHAR(50), -- For students (NULL for others)
+    department VARCHAR(100),     -- For students & faculty
+    year INT,                    -- For students
+    FOREIGN KEY (role_id) REFERENCES roles(role_id),
+    index email_idx (emailId)
+    index register_number(register_number)
 );

@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const createError = require("http-errors");
 
+// forwards serious complaints to admin
 exports.send_to_admin = (req,res,next) => {
     try{
       const{complaint_id, id} = req.params;
@@ -23,3 +24,21 @@ exports.send_to_admin = (req,res,next) => {
       next(error);
     }
 }
+
+// update rovoke request status
+exports.update_revoke_status = (req, res, next) => {
+  try {
+    const{status, complaint_id} = req.params;
+    if(!['accepted','rejected'].includes(status) || complaint_id.trim() == "")return next(createError.BadRequest("some parameters are missing!"));
+    let sql = "update faculty_logger set status = ? where complaint_id = ?";
+    db.query(sql,[status, complaint_id], (err,result) => {
+      if(err)return next(err);
+      if(result.affectedRows == 0)return next(createError.BadRequest('status not updated!'));
+      res.send(`status updated to ${status}`);
+    })
+  } catch (error) {
+    next(error);
+  }
+};
+
+
