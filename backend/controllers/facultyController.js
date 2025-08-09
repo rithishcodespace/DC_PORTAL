@@ -1,5 +1,6 @@
 const db = require("../config/db");
 const createError = require("http-errors");
+const Tesseract = require("tesseract");
 
 // forwards serious complaints to admin
 exports.send_to_admin = (req,res,next) => {
@@ -40,5 +41,44 @@ exports.update_revoke_status = (req, res, next) => {
     next(error);
   }
 };
+
+// posts complaint
+exports.post_complaint = async(req,res,next) => {
+  try{
+    const{file} = req.body;
+    if(!file)return next(createError.BadRequest('file not found!'));
+    // ocr
+    const result = await Tesseract.recognize(file.path, 'eng', {
+      logger: info => console.log(info) // ocr process logging
+    });
+
+    const rawText = result.data.text;
+    // Regex extraction
+    const nameMatch = rawText.match(/^[A-Z\s]+$/m);
+    const regMatch = rawText.match(/\d{7}[A-Z]{2}\d{3}/);
+    const deptMatch = rawText.match(/CSE|ECE|EEE|MECH|FD|FT|CB|AD|AL|BT|ISE|AG|EIE/);
+
+    const extractedData = {
+      name: nameMatch ? nameMatch[0] : null,
+      register_number: regMatch ? regMatch[0] : null,
+      dept: deptMatch ? deptMatch[0] : null
+    };
+
+    if(extractedData.register_number.trim().length < 12)res.status(404).json({
+      message : "retake photo, image was not clear!"
+    })
+
+    // fetch student details using his register number
+    let sql = "select * from users where reg_num = ?";
+    db.query(sql,[extractedData.register_number],(err,result) => {
+      if(err)return next(err);
+      if(result.length == 0)return next(createError[404]);
+    })
+
+  }
+  catch(error){
+    next(error);
+  }
+}
 
 
