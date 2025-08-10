@@ -1,6 +1,5 @@
 const createError = require("http-errors");
 const db = require("../config/db");
-const {response_id, complaint_id} = require("../utils/id_generation");
 
 // Get all complaints for a student + revoke_status
 exports.get_complaints = (req,res,next) => {

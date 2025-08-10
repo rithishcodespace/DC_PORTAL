@@ -10,12 +10,6 @@ exports.complaint_id = () => {
   });
 };
 
-
-exports.response_id = async(complaint_id) => {
-    const num_part = complaint_id.split("_")[1];
-    return `R_${num_part}`
-}
-
 exports.meeting_id = () => {
   return new Promise((resolve, reject) => {
     db.query("SELECT CONCAT('MEET_', UUID_SHORT()) AS meeting_id", (err, result) => {

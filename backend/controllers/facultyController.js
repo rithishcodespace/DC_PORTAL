@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const createError = require("http-errors");
 const Tesseract = require("tesseract");
+const{complaint_id} = require("../utils/id_generation");
 
 // forwards serious complaints to admin
 exports.send_to_admin = (req,res,next) => {
@@ -45,9 +46,10 @@ exports.update_revoke_status = (req, res, next) => {
 // posts complaint
 exports.post_complaint = async(req,res,next) => {
   try{
-    const{file, complaint} = req.body;
+    const{faculty_id} = req.params;
+    const{file, complaint, venue} = req.body;
     if(!file)return next(createError.BadRequest('file not found!'));
-    if(!complaint)return next(createError.BadRequest("complaint not found!"));
+    if(!complaint || !venue)return next(createError.BadRequest("complaint description or venue not found!"));
     // ocr
     const result = await Tesseract.recognize(file.path, 'eng', {
       logger: info => console.log(info) // ocr process logging
@@ -71,13 +73,19 @@ exports.post_complaint = async(req,res,next) => {
 
     // fetch student details using his register number
     let sql = "select * from users where reg_num = ?";
-    db.query(sql,[extractedData.register_number],(err,user) => {
+    db.query(sql,[extractedData.register_number],async(err,user) => {
       if(err)return next(err);
       if(result.length == 0)return next(createError[404]);
       if(user.length == 0)return next(createError.NotFound("User not found!"));
       // insert complaint into faculty logger page
-      
-
+      const comp_id = await complaint_id();
+      sql = "insert into faculty_logger(complaint_id, student_id, complaint, venue, faculty_id) values(?, ?, ?, ?, ?)";
+      const values = [comp_id, user.user_id, complaint, venue, faculty_id];
+      db.query(sql,values,(err1,result) => {
+        if(err1)return next(err1);
+        if(result.affectedRows == 0)return next(createError.BadRequest("An error occured while registering the complaint!"));
+        res.send('Complaint registered successfully!');
+      })
     })
 
   }
