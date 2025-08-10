@@ -7,7 +7,7 @@ import Login from './src/pages/LoginPage';
 export default function App() {
   return (
     <View>
-      <Login/>
+      <Dashboard/>
     </View>
   );
 }
