@@ -1,6 +1,6 @@
 const db = require("../config/db");
 const createError = require("http-errors");
-const Tesseract = require("tesseract");
+const Tesseract = require("tesseract.js");
 
 // forwards serious complaints to admin
 exports.send_to_admin = (req,res,next) => {
