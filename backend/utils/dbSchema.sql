@@ -5,7 +5,7 @@ CREATE TABLE faculty_logger (
     complaint TEXT NOT NULL,
     venue VARCHAR(200) NOT NULL,
     faculty_id VARCHAR(200),
-    status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+    status ENUM('pending', 'accepted', 'rejected', 'forwarded') DEFAULT 'pending',
     revoke_message text,
     FOREIGN KEY (student_id) REFERENCES users(user_id)
      on delete cascade
@@ -14,12 +14,8 @@ CREATE TABLE faculty_logger (
 
 create table faculty_to_admin_issues (
     complaint_id varchar(20) primary key,
-    student_id bigint not null,
-    date_time datetime not null,
+    forwarded_date_time datetime not null,
     foreign key (complaint_id) references faculty_logger(complaint_id)
-    on delete cascade
-    on update cascade,
-    foreign key (student_id) references users(user_id)
     on delete cascade
     on update cascade
 );

@@ -1,31 +1,50 @@
 const db = require("../config/db");
 const createError = require("http-errors");
-const Tesseract = require("tesseract");
+const Tesseract = require("tesseract.js");
 const{complaint_id} = require("../utils/id_generation");
 
 // forwards serious complaints to admin
-exports.send_to_admin = (req,res,next) => {
-    try{
-      const{complaint_id, id} = req.params;
-      if(complaint_id.trim() == "" || id.trim() == "")return next(createError.BadRequest());
-      let sql = "insert into faculty_to_admin_issues(complaint_id, student_id, date_time) values(?, ?, NOW())";
-      db.query(sql,[complaint_id, id],(err,result) => {
-        if(err)return next(err);
-        if(result.affectedRows == 0)return next(createError[400]);
-      })
-      let sql1 = "delete from faculty_logger where complaint_id = ? and id = ?";
-      db.query(sql,[complaint_id, id],(err,result) => {
-        if(err)return next(err);
-        if(result.affectedRows == 0)return next(createError[400])
-        res.json({
-          message:"complaint forwarded to admin"
-        })
-      })
-    }
-    catch(error){
-      next(error);
-    }
-}
+exports.send_to_admin = (req, res, next) => {
+  try {
+    const { complaint_id } = req.params;
+    if (!complaint_id || complaint_id.trim() === "")
+      return next(createError.BadRequest("complaint_id is required"));
+
+    db.beginTransaction(err => {
+      if (err) return next(err);
+
+      // Insert into faculty_to_admin_issues
+      const sql = `INSERT INTO faculty_to_admin_issues(complaint_id, date_time) VALUES(?, NOW())`;
+      db.query(sql, [complaint_id], (err, result) => {
+        if (err || result.affectedRows === 0) {
+          return db.rollback(() => {
+            next(err || createError.BadRequest("Failed to forward complaint"));
+          });
+        }
+
+        // Update faculty_logger status
+        const updateSql = `UPDATE faculty_logger SET status = ? WHERE complaint_id = ?`;
+        db.query(updateSql, ['forwarded', complaint_id], (err, result) => {
+          if (err || result.affectedRows === 0) {
+            return db.rollback(() => {
+              next(err || createError.BadRequest("Failed to update status"));
+            });
+          }
+
+          // Commit transaction
+          db.commit(err => {
+            if (err) {
+              return db.rollback(() => next(err));
+            }
+            res.json({ message: "Complaint forwarded to admin" });
+          });
+        });
+      });
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // update rovoke request status
 exports.update_revoke_status = (req, res, next) => {
@@ -47,11 +66,11 @@ exports.update_revoke_status = (req, res, next) => {
 exports.post_complaint = async(req,res,next) => {
   try{
     const{faculty_id} = req.params;
-    const{file, complaint, venue} = req.body;
-    if(!file)return next(createError.BadRequest('file not found!'));
+    const{complaint, venue} = req.body;
+    if(!req.file)return next(createError.BadRequest('file not found!'));
     if(!complaint || !venue)return next(createError.BadRequest("complaint description or venue not found!"));
     // ocr
-    const result = await Tesseract.recognize(file.path, 'eng', {
+    const result = await Tesseract.recognize(req.file.path, 'eng', {
       logger: info => console.log(info) // ocr process logging
     });
 
@@ -67,25 +86,40 @@ exports.post_complaint = async(req,res,next) => {
       dept: deptMatch ? deptMatch[0] : null
     };
 
-    if(extractedData.register_number.trim().length < 12)res.status(404).json({
-      message : "retake photo, image was not clear!"
-    })
+    if(!extractedData.register_number || extractedData.register_number.trim().length < 12) {
+      return res.status(404).json({
+          message: "Retake photo, image was not clear!"
+      });
+    }
 
-    // fetch student details using his register number
-    let sql = "select * from users where reg_num = ?";
-    db.query(sql,[extractedData.register_number],async(err,user) => {
-      if(err)return next(err);
-      if(result.length == 0)return next(createError[404]);
-      if(user.length == 0)return next(createError.NotFound("User not found!"));
-      // insert complaint into faculty logger page
-      const comp_id = await complaint_id();
-      sql = "insert into faculty_logger(complaint_id, student_id, complaint, venue, faculty_id) values(?, ?, ?, ?, ?)";
-      const values = [comp_id, user.user_id, complaint, venue, faculty_id];
-      db.query(sql,values,(err1,result) => {
-        if(err1)return next(err1);
-        if(result.affectedRows == 0)return next(createError.BadRequest("An error occured while registering the complaint!"));
-        res.send('Complaint registered successfully!');
-      })
+    db.beginTransaction(err => {
+      // fetch student details using his register number
+      let sql = "select * from users where reg_num = ?";
+      db.query(sql,[extractedData.register_number],async(err,user) => {
+        if(err || user.length == 0){
+          return db.rollback(() => {
+            next(err || next(createError.NotFound("User not found!")))
+          })
+        }
+        // insert complaint into faculty logger page
+        const comp_id = await complaint_id();
+        sql = "insert into faculty_logger(complaint_id, student_id, complaint, venue, faculty_id) values(?, ?, ?, ?, ?)";
+        const values = [comp_id, user[0].user_id, complaint, venue, faculty_id];
+        db.query(sql,values,(err1,result) => {
+          if((err) || result.affectedRows == 0){
+            return db.rollback(()=>{
+              next(err1 || createError.BadRequest("An error occured while registering the complaint!"))
+            })
+          }
+           db.commit(err => {
+            if (err) {
+              return db.rollback(() => next(err));
+            }
+            res.send('Complaint registered successfully!');
+          });
+          
+        })
+    }) 
     })
 
   }

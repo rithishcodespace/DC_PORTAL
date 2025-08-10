@@ -35,3 +35,27 @@ exports.revoke_complaint = (req,res,next) => {
   }
 }
 
+// get all scheduled meetings
+exports.get_scheduled_meetings = (req,res,next) => {
+  try{
+    const{type} = req.params;
+    const{student_id} = req.body;
+    if(!student_id.trim())return next(createError.BadRequest("student_id not found!"));
+    if(!['history','scheduled'].includes(type))return next(createError.BadRequest('invalid type'))
+    condition = (type == 'scheduled') ? 't1.date_time >= NOW()' : 't1.date_time < NOW()';
+    let sql = ` select t1.meeting_id, t1.admin_id, t1.venue, t1.date_time
+                from meetings t1 join faculty_logger t2 
+                on t1.complaint_id = t2.complaint_id
+                where t2.student_id = ? and ${condition} `
+    db.query(sql,[student_id],(err,result) => {
+      if(err || result.length == 0){
+        return next(err || createError.NotFound('no scheduled meetings found'));
+      }
+      res.send(result);
+    })
+  }
+  catch(error){
+    next(error);
+  }
+}
+
