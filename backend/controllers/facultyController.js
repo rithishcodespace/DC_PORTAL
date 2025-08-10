@@ -45,8 +45,9 @@ exports.update_revoke_status = (req, res, next) => {
 // posts complaint
 exports.post_complaint = async(req,res,next) => {
   try{
-    const{file} = req.body;
+    const{file, complaint} = req.body;
     if(!file)return next(createError.BadRequest('file not found!'));
+    if(!complaint)return next(createError.BadRequest("complaint not found!"));
     // ocr
     const result = await Tesseract.recognize(file.path, 'eng', {
       logger: info => console.log(info) // ocr process logging
@@ -70,9 +71,13 @@ exports.post_complaint = async(req,res,next) => {
 
     // fetch student details using his register number
     let sql = "select * from users where reg_num = ?";
-    db.query(sql,[extractedData.register_number],(err,result) => {
+    db.query(sql,[extractedData.register_number],(err,user) => {
       if(err)return next(err);
       if(result.length == 0)return next(createError[404]);
+      if(user.length == 0)return next(createError.NotFound("User not found!"));
+      // insert complaint into faculty logger page
+      
+
     })
 
   }
